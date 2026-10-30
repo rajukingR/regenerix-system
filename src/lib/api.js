@@ -6,12 +6,13 @@ export const API = (
   (import.meta.env.DEV ? 'http://localhost:5000' : '/api')
 ).replace(/\/+$/, '');
 
-// Normalize API paths to prevent duplicate /api/api/... URLs.
+// Preserve the existing token key if your project already uses another value.
+export const TOKEN = 'regenerix_token';
+
+// Normalize paths to prevent duplicate /api/api/... URLs.
 const normalizeApiPath = (path) => {
   let cleanPath = `/${String(path || '').replace(/^\/+/, '')}`;
 
-  // If the base URL already ends with /api, remove /api
-  // from the request path to avoid duplication.
   if (/\/api$/i.test(API)) {
     cleanPath = cleanPath.replace(/^\/api(?=\/|$)/i, '');
   }
@@ -19,44 +20,75 @@ const normalizeApiPath = (path) => {
   return cleanPath || '/';
 };
 
+// Build API URLs.
+export const apiUrl = (path) => {
+  const normalizedPath = normalizeApiPath(path);
+  return `${API}${normalizedPath}`;
+};
+
 // Build URLs for uploaded images and videos.
 export const mediaUrl = (path) => {
   if (!path) return '';
 
-  // Already an absolute URL.
   if (/^https?:\/\//i.test(path)) {
     return path;
   }
 
-  // Uploaded media is served by the backend at /uploads/...
   if (/^\/?uploads\//i.test(path)) {
     const mediaPath = `/${path.replace(/^\/+/, '')}`;
 
-    // Production: uploads are served from the same domain.
+    // Production uses the same domain for uploaded media.
     if (API === '/api') {
       return mediaPath;
     }
 
-    // Custom API URL or local backend.
     return `${API}${mediaPath}`;
   }
 
   return path;
 };
 
+// Shared request function.
 async function request(path, options = {}) {
-  const normalizedPath = normalizeApiPath(path);
-  const url = `${API}${normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`}`;
+  const url = apiUrl(path);
+  const isFormData =
+    typeof FormData !== 'undefined' &&
+    options.body instanceof FormData;
+
+  const headers = {
+    ...(options.body != null && !isFormData
+      ? { 'Content-Type': 'application/json' }
+      : {}),
+    ...(options.headers || {}),
+  };
+
+  const token =
+    typeof localStorage !== 'undefined'
+      ? localStorage.getItem(TOKEN)
+      : null;
+
+  if (token && !headers.Authorization && !headers.authorization) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  let body = options.body;
+
+  if (body != null && !isFormData && typeof body !== 'string') {
+    body = JSON.stringify(body);
+  }
 
   let response;
 
   try {
-    response = await fetch(url, options);
+    response = await fetch(url, {
+      ...options,
+      headers,
+      body,
+    });
   } catch {
     const error = new Error(
       'Cannot reach the server. Check your connection and try again.'
     );
-
     error.status = 0;
     throw error;
   }
@@ -75,22 +107,22 @@ async function request(path, options = {}) {
   return data;
 }
 
+// Generic API function used by Login.jsx.
+export const api = (path, options = {}) =>
+  request(path, options);
+
 // GET
 export const apiGet = (path, signal) =>
-  request(path, { signal });
+  request(path, { method: 'GET', signal });
 
 // POST JSON
 export const apiPost = (path, body) =>
   request(path, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify(body),
   });
 
-// POST FormData.
-// Do not manually set Content-Type; the browser sets the multipart boundary.
+// POST FormData
 export const apiForm = (path, form) =>
   request(path, {
     method: 'POST',
