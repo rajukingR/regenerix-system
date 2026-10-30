@@ -4,6 +4,9 @@ import { TOKEN, api } from './api.js'
 import { btn, inp } from './Fields.jsx'
 
 export default function Login() {
+
+  console.log(api,"KKKKKKKKKKKKKKKKKKKKFFFFFFFFFFFFFFFFFFF");
+  
   const nav = useNavigate(); const [f, setF] = useState({ email: '', password: '' }); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false)
   if (localStorage.getItem(TOKEN)) return <Navigate to="/admin" replace />
   const go = async (e) => {
