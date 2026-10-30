@@ -13,10 +13,6 @@ app.use('/uploads/videos', express.static(path.join(ROOT, 'videos'), { maxAge: '
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 30 }), require('./routes/auth'));
 app.use('/api/public', rateLimit({ windowMs: 60 * 1000, max: 120 }), require('./routes/public'));
-app.use(
-  '/api/media/blob-upload',
-  require('./routes/blobUpload')
-);
 app.use('/api/admin', require('./routes/admin'));
 app.use((req, res) => res.status(404).json({ message: 'Not found' }));
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
