@@ -15,7 +15,7 @@ export function SiteProvider({ children }) {
   const last = useRef('')
   const load = useCallback(async (silent) => {
     try {
-      const raw = await apiGet('/api/public/site'), str = JSON.stringify(raw)
+      const raw = await apiGet('/public/site'), str = JSON.stringify(raw)
       if (str === last.current) return setS((x) => (x.status === 'ready' ? x : { ...x, status: 'ready' }))
       last.current = str
       setS({ status: 'ready', data: adapt(raw), nav: raw.nav || [], pages: raw.pages || [], error: '' })

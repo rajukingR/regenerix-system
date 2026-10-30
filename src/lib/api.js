@@ -1,15 +1,15 @@
-// API base URL.
-// Production: /api
-// Local development: http://localhost:5000
-export const API = (
+const API = (
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:5000' : '/api')
 ).replace(/\/+$/, '');
 
-// Preserve the existing token key if your project already uses another value.
 export const TOKEN = 'regenerix_token';
 
-// Normalize paths to prevent duplicate /api/api/... URLs.
+/**
+ * Normalize API paths.
+ * /auth/login     -> /api/auth/login
+ * /api/auth/login -> /api/auth/login
+ */
 const normalizeApiPath = (path) => {
   let cleanPath = `/${String(path || '').replace(/^\/+/, '')}`;
 
@@ -20,13 +20,14 @@ const normalizeApiPath = (path) => {
   return cleanPath || '/';
 };
 
-// Build API URLs.
-export const apiUrl = (path) => {
-  const normalizedPath = normalizeApiPath(path);
-  return `${API}${normalizedPath}`;
-};
+/**
+ * Generate API URLs.
+ */
+export const apiUrl = (path) => `${API}${normalizeApiPath(path)}`;
 
-// Build URLs for uploaded images and videos.
+/**
+ * Generate media URLs.
+ */
 export const mediaUrl = (path) => {
   if (!path) return '';
 
@@ -35,22 +36,18 @@ export const mediaUrl = (path) => {
   }
 
   if (/^\/?uploads\//i.test(path)) {
-    const mediaPath = `/${path.replace(/^\/+/, '')}`;
-
-    // Production uses the same domain for uploaded media.
-    if (API === '/api') {
-      return mediaPath;
-    }
-
-    return `${API}${mediaPath}`;
+    return `/${path.replace(/^\/+/, '')}`;
   }
 
   return path;
 };
 
-// Shared request function.
+/**
+ * Common request handler.
+ */
 async function request(path, options = {}) {
   const url = apiUrl(path);
+
   const isFormData =
     typeof FormData !== 'undefined' &&
     options.body instanceof FormData;
@@ -67,13 +64,21 @@ async function request(path, options = {}) {
       ? localStorage.getItem(TOKEN)
       : null;
 
-  if (token && !headers.Authorization && !headers.authorization) {
+  if (
+    token &&
+    !headers.Authorization &&
+    !headers.authorization
+  ) {
     headers.Authorization = `Bearer ${token}`;
   }
 
   let body = options.body;
 
-  if (body != null && !isFormData && typeof body !== 'string') {
+  if (
+    body != null &&
+    !isFormData &&
+    typeof body !== 'string'
+  ) {
     body = JSON.stringify(body);
   }
 
@@ -86,11 +91,9 @@ async function request(path, options = {}) {
       body,
     });
   } catch {
-    const error = new Error(
-      'Cannot reach the server. Check your connection and try again.'
+    throw new Error(
+      'Unable to connect to the server. Please check your connection or server status.'
     );
-    error.status = 0;
-    throw error;
   }
 
   const data = await response.json().catch(() => ({}));
@@ -107,22 +110,33 @@ async function request(path, options = {}) {
   return data;
 }
 
-// Generic API function used by Login.jsx.
+/**
+ * General API request.
+ */
 export const api = (path, options = {}) =>
   request(path, options);
 
-// GET
+/**
+ * GET request.
+ */
 export const apiGet = (path, signal) =>
-  request(path, { method: 'GET', signal });
+  request(path, {
+    method: 'GET',
+    signal,
+  });
 
-// POST JSON
+/**
+ * POST JSON request.
+ */
 export const apiPost = (path, body) =>
   request(path, {
     method: 'POST',
-    body: JSON.stringify(body),
+    body,
   });
 
-// POST FormData
+/**
+ * POST FormData request.
+ */
 export const apiForm = (path, form) =>
   request(path, {
     method: 'POST',
