@@ -48,6 +48,8 @@ export const mediaUrl = (path) => {
 async function request(path, options = {}) {
   const url = apiUrl(path);
 
+  console.log('API request URL:', url);
+
   const isFormData =
     typeof FormData !== 'undefined' &&
     options.body instanceof FormData;
