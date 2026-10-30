@@ -24,21 +24,10 @@
       }
     },
     {
-      "source": "/admin",
-      "destination": {
-        "service": "app"
-      }
-    },
-    {
-      "source": "/admin/(.*)",
-      "destination": {
-        "service": "app"
-      }
-    },
-    {
       "source": "/(.*)",
       "destination": {
-        "service": "app"
+        "service": "app",
+        "path": "/index.html"
       }
     }
   ]
