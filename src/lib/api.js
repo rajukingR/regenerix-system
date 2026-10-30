@@ -6,6 +6,19 @@ export const API = (
   (import.meta.env.DEV ? 'http://localhost:5000' : '/api')
 ).replace(/\/+$/, '');
 
+// Normalize API paths to prevent duplicate /api/api/... URLs.
+const normalizeApiPath = (path) => {
+  let cleanPath = `/${String(path || '').replace(/^\/+/, '')}`;
+
+  // If the base URL already ends with /api, remove /api
+  // from the request path to avoid duplication.
+  if (/\/api$/i.test(API)) {
+    cleanPath = cleanPath.replace(/^\/api(?=\/|$)/i, '');
+  }
+
+  return cleanPath || '/';
+};
+
 // Build URLs for uploaded images and videos.
 export const mediaUrl = (path) => {
   if (!path) return '';
@@ -16,26 +29,19 @@ export const mediaUrl = (path) => {
   }
 
   // Uploaded media is served by the backend at /uploads/...
-  if (path.startsWith('/uploads/')) {
+  if (/^\/?uploads\//i.test(path)) {
+    const mediaPath = `/${path.replace(/^\/+/, '')}`;
+
+    // Production: uploads are served from the same domain.
     if (API === '/api') {
-      return path;
+      return mediaPath;
     }
 
-    return `${API}${path}`;
+    // Custom API URL or local backend.
+    return `${API}${mediaPath}`;
   }
 
   return path;
-};
-
-// Normalize API paths to prevent /api/api/... duplication.
-const normalizeApiPath = (path) => {
-  const cleanPath = `/${String(path || '').replace(/^\/+/, '')}`;
-
-  if (API === '/api') {
-    return cleanPath.replace(/^\/api(?=\/|$)/, '') || '/';
-  }
-
-  return cleanPath;
 };
 
 async function request(path, options = {}) {
@@ -78,9 +84,9 @@ export const apiPost = (path, body) =>
   request(path, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
 
 // POST FormData.
@@ -88,5 +94,5 @@ export const apiPost = (path, body) =>
 export const apiForm = (path, form) =>
   request(path, {
     method: 'POST',
-    body: form
+    body: form,
   });
